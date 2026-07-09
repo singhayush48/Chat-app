@@ -1,0 +1,31 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "a chat app clone type of messaging apps in real expanding and learning how to implement the topics and tools and alsso using ai ",
+  "keywords": [
+    "node",
+    "express",
+    "chat",
+    "app"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "Ayush Chat app"
+  },
+  "license": "ISC",
+  "author": "Ayush Singh Parihar",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.22.0",
+    "uuid": "^14.0.1"
+  }
+}

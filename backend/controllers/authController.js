@@ -22,11 +22,10 @@ const registerUser=async(req,res)=>{
 }
     const hashedPassword=await bcrypt.hash(password,10);
     
-    const userId = uuid.v4();
+   
 
-console.log(userId);
-console.log(userId.length);
-  const result=await userModel.createUser(userId, username, phone, email, hashedPassword) 
+
+  const result=await userModel.createUser(username, phone, email, hashedPassword) 
   if(result){
     return res.status(201).json({
     success: true,
@@ -70,4 +69,18 @@ const getUserProfile=async(req,res)=>{
     return res.status(200).json({user});
 }
 
-module.exports={registerUser,loginUser,logoutUser,getUserProfile};  
+const searchUser=async(req,res)=>{
+    const {name}=req.query;
+    
+    const users=await userModel.searchUser(name);
+    if(users.rows.length === 0){
+        return res.status(404).json({message:"No users found"});
+    }
+    return res.status(200).json({users:users.rows});
+}
+const getAllUsers=async(req,res)=>{
+    const users=await userModel.getAllUsers();
+    return res.status(200).json({users:users.rows});
+}
+
+module.exports={registerUser,loginUser,logoutUser,getUserProfile,getAllUsers,searchUser};  

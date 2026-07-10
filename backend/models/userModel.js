@@ -23,4 +23,8 @@ const getUserById=async(userId)=>{
 const findUserByEmail=async(email)=>{
     return await pool.query("SELECT * FROM users WHERE email=$1",[email]);
 }
-module.exports={createUser,loginUser,getUserById,updateUser,findUserByEmail,getAllUsers,searchUser};
+
+const getAllConversations=async(userId)=>{
+    return await pool.query("SELECT c.* FROM conversations c JOIN conversation_members cm ON c.conversation_id = cm.conversation_idWHERE cm.user_id = $1;",[userId]);
+}
+module.exports={createUser,loginUser,getUserById,updateUser,findUserByEmail,getAllUsers,searchUser,getAllConversations};

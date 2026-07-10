@@ -69,6 +69,12 @@ const getUserProfile=async(req,res)=>{
     return res.status(200).json({user});
 }
 
+const getAllConversations=async(req,res)=>{
+    const userId=req.user.userId;
+    const conversations=await userModel.getAllConversations(userId);
+    return res.status(200).json({conversations});
+}
+
 const searchUser=async(req,res)=>{
     const {name}=req.query;
     
@@ -83,4 +89,4 @@ const getAllUsers=async(req,res)=>{
     return res.status(200).json({users:users.rows});
 }
 
-module.exports={registerUser,loginUser,logoutUser,getUserProfile,getAllUsers,searchUser};  
+module.exports={registerUser,loginUser,logoutUser,getUserProfile,getAllUsers,searchUser,getAllConversations};  

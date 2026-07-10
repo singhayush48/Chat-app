@@ -5,6 +5,6 @@ const  {createConversation,sendMessage}=require('../controllers/messageControlle
 
 
 router.post('/conversation', authmiddleware, createConversation);
-
+router.get('/conversation/:id', authmiddleware,)
 router.post('/message', authmiddleware, sendMessage);
 module.exports = router;

@@ -28,4 +28,10 @@ const sendMessage=async(req,res)=>{
     return res.status(201).json({message:"Message sent",message:result});
 }
 
-module.exports={createConversation,sendMessage};  
+const getConversationById=async(req,res)=>{
+    const conversationId=req.params.id;
+    const result=await messageModel.getConversationById(conversationId);
+    return res.status(200).json({conversation:result});
+}
+
+module.exports={createConversation,sendMessage,getConversationById};  

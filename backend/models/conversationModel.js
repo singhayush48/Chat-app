@@ -10,4 +10,8 @@ const createConversation=async(senderId,receiverId)=>{
 const sendMessage=async(conversationId,sender_id,content)=>{
     return await pool.query("INSERT INTO MESSAGES (conversation_id,sender_id,content,message_type) VALUES($1,$2,$3,'TEXT') RETURNING *",[conversationId,sender_id,content]);
 }
-module.exports={createConversation,sendMessage};
+
+const getConversationById=async(conversationId)=>{
+    return await pool.query("SELECT * FROM MESSAGES WHERE conversation_id=$1 ORDER BY created_at ASC RETURNING *",[conversationId]);
+}
+module.exports={createConversation,sendMessage,getConversationById};

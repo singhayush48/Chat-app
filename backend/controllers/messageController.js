@@ -21,11 +21,16 @@ const createConversation=async(req,res)=>{
 const sendMessage=async(req,res)=>{
     const {conversationId,content}=req.body;
     const senderID=req.user.userId;
-    if(!conversationId || !content){
-        return res.status(400).json({message:"All fields are required"});
-    }
-    const result=await messageModel.sendMessage(conversationId,senderID,content);
-    return res.status(201).json({message:"Message sent",message:result});
+    messageModel.isConversationMember(conversationId,senderID).then((result)=>{
+        if(result.rows.length===0){
+            return res.status(403).json({message:"You are not a member of this conversation"});
+        }
+        if(!conversationId || !content){
+            return res.status(400).json({message:"All fields are required"});
+        }
+        const result=await messageModel.sendMessage(conversationId,senderID,content);
+        return res.status(201).json({message:"Message sent",message:result});
+    });
 }
 
 const getConversationById=async(req,res)=>{

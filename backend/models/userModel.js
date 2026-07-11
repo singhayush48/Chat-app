@@ -25,6 +25,6 @@ const findUserByEmail=async(email)=>{
 }
 
 const getAllConversations=async(userId)=>{
-    return await pool.query("SELECT c.* FROM conversations c JOIN conversation_members cm ON c.conversation_id = cm.conversation_idWHERE cm.user_id = $1;",[userId]);
+    return await pool.query("SELECT c.* FROM conversations c JOIN conversation_members cm ON c.conversation_id = cm.conversation_id WHERE cm.user_id = $1;",[userId]);
 }
 module.exports={createUser,loginUser,getUserById,updateUser,findUserByEmail,getAllUsers,searchUser,getAllConversations};

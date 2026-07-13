@@ -6,6 +6,14 @@ const authRoutes = require('./routes/authRoute');
 const messagesRoutes = require('./routes/messageRoute.js');
 const cookieParser = require('cookie-parser');
 
+
+const cors = require('cors');
+app.use(cors({
+  origin: 'http://localhost:5173', // your Vite dev server URL
+  credentials: true
+}));
+
+
 app.use(require('cookie-parser')());
 
 app.use(express.json());

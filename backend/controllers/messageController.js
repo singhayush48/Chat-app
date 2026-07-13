@@ -10,15 +10,15 @@ dotenv.config();
 
 const createConversation=async(req,res)=>{
   const{userId,username}=req.body;
-  const senderID=req.user.userId;
+  const senderId=req.user.userId;
 
 
   if(!userId || !username){
     return res.status(400).json({message:"All fields are required"});
   }
-  const existing = await conversationModel.findPrivateConversation(
+  const existing = await messageModel.findPrivateConversation(
     senderId,
-    receiverId
+    userId
 );
 
 if (existing.rows.length > 0) {
@@ -28,7 +28,7 @@ if (existing.rows.length > 0) {
     });
 }
 
-    const result=await messageModel.createConversation(senderID,userId);
+    const result=await messageModel.createConversation(senderId,userId);
     return res.status(201).json({message:"Conversation created",conversationId:result});
 }
 

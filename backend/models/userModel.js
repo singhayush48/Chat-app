@@ -1,6 +1,6 @@
 const pool=require("../db/db");
 
-const createUser=async(userId,username,phone,email,password)=>{
+const createUser=async(username,phone,email,password)=>{
     return await pool.query("INSERT INTO users(username,phone,email,password) VALUES($1,$2,$3,$4) RETURNING *",[username,phone,email,password]);
 }
 const loginUser=async(email)=>{

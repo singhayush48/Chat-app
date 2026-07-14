@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LogOut, MessageCircle, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar } from '@/components/common/Avatar';
 import { ProfileCard } from '@/components/common/ProfileCard';
-import { EditProfileModal } from '@/components/auth/EditProfileModal';
+import { ROUTES } from '@/constants/routes';
 
 export function Navbar() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -38,7 +39,7 @@ export function Navbar() {
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           aria-label="Open profile menu"
-          className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="rounded-full transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <Avatar name={user?.username} src={user?.profile_pic} size="sm" />
         </button>
@@ -53,13 +54,13 @@ export function Navbar() {
               type="button"
               role="menuitem"
               onClick={() => {
-                setProfileModalOpen(true);
                 setMenuOpen(false);
+                navigate(ROUTES.PROFILE);
               }}
               className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-surface-elevated"
             >
               <Settings className="h-4 w-4" aria-hidden="true" />
-              Edit profile
+              View profile
             </button>
             <button
               type="button"
@@ -73,8 +74,6 @@ export function Navbar() {
           </div>
         )}
       </div>
-
-      <EditProfileModal open={profileModalOpen} onClose={() => setProfileModalOpen(false)} />
     </div>
   );
 }

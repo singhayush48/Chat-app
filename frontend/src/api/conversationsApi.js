@@ -31,6 +31,8 @@ export const conversationsApi = {
    */
   list: async () => {
     const { data } = await axiosInstance.get(ENDPOINTS.CONVERSATIONS.LIST);
-    return data?.conversations?.rows ?? [];
-  },
+    return data?.conversations ?? [];
+},
+
+
 };

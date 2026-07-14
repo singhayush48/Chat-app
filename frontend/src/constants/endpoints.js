@@ -1,68 +1,50 @@
 /**
- * Centralized API endpoint paths.
- *
- * Two categories in here, clearly separated:
- *
- * 1) VERIFIED — matches the actual backend routes as confirmed against the
- *    provided source code. The backend mounts three different base paths:
- *      /user       -> auth mutations (register/login/logout) + user search
- *      /api/auth   -> current user, all users, conversations list
- *      /api        -> conversation creation, single conversation (messages), sending a message
- *
- * 2) PLANNED (not implemented on the backend yet) — designed so the
- *    frontend can be wired against them now. These will 404 until the
- *    backend implements them. Each one lists the exact method, body, and
- *    expected response shape to implement.
+ * Centralized API endpoint paths — matches the actual backend routes.
+ * The backend mounts four different base paths:
+ *   /user        -> auth mutations (register/login/logout) + user search
+ *   /api/auth    -> current user, all users, conversations list
+ *   /api         -> conversation creation, single conversation (messages), sending/editing/deleting a message
+ *   /api/users   -> profile update, avatar upload, single-user online status
  */
 
 export const ENDPOINTS = {
   AUTH: {
     REGISTER: '/user/register', // POST { username, phone, email, password }
     LOGIN: '/user/login', // POST { email, password } -> sets httpOnly cookie "token"
-    LOGOUT: '/user/logout', // POST
+    LOGOUT: '/user/logout', // POST (protected — marks the user offline)
     ME: '/api/auth/me', // GET (protected)
   },
   USERS: {
     ALL: '/api/auth/users', // GET (protected)
     SEARCH: '/user/search', // GET (protected) ?name=<query>  (NOT ?q=)
 
-    // --- PLANNED, backend TODO --------------------------------------
-    // PATCH /api/users/me
-    //   body:  { username?, phone?, bio? }
-    //   200 -> { user: { user_id, username, phone, email, bio, profile_pic } }
-    // The `users` table already has `bio` and `profile_pic` columns
-    // (used by /user/search), so this is just wiring a route + controller
-    // to an UPDATE query — no schema change needed.
-    UPDATE_ME: '/api/users/me',
+    UPDATE_ME: '/api/users/me', // PATCH (protected) { username?, phone?, bio? }
 
-    // POST /api/users/me/avatar  (multipart/form-data, field name: "avatar")
-    //   200 -> { user: { ...same shape as above, profile_pic: <new url> } }
-    UPDATE_AVATAR: '/api/users/me/avatar',
-    // ------------------------------------------------------------------
+    // multipart/form-data, field name "avatar". Response's profile_pic is
+    // a server-relative path (e.g. "/uploads/xyz.jpg") — resolve against
+    // the API origin, not the frontend origin (see utils/resolveUrl.js).
+    UPDATE_AVATAR: '/api/users/me/avatar', // POST (protected)
+
+    // Standalone status lookup for one user. Not used by the sidebar/chat
+    // header today — those already get is_online/last_seen for free via
+    // CONVERSATIONS.LIST's `other_user`. Kept here for any future feature
+    // that needs to check a specific user outside a conversation context.
+    STATUS: (userId) => `/api/users/${userId}/status`, // GET (protected) -> { is_online, last_seen }
   },
   CONVERSATIONS: {
     CREATE: '/api/conversation', // POST (protected) { userId, username }
+
+    // Returns each conversation enriched with the other participant
+    // (including is_online/last_seen) and a last_message preview:
+    //   { conversation_id, type, created_at, updated_at,
+    //     other_user: { user_id, username, profile_pic, is_online, last_seen } | null,
+    //     last_message: { content, sender_id, created_at } | null }
     LIST: '/api/auth/conversations', // GET (protected)
-    // --- PLANNED enrichment, backend TODO ------------------------------
-    // Today this returns bare `conversations` rows (conversation_id, type,
-    // created_by, created_at, updated_at) with NO participant info and NO
-    // last message, because there's no join back to conversation_members
-    // or messages. There is currently no way for the client to know who a
-    // conversation is with after a page refresh.
-    //
-    // Ask: have this same GET /api/auth/conversations return, per row:
-    //   {
-    //     conversation_id, type, created_at, updated_at,
-    //     other_user: { user_id, username, profile_pic } | null,
-    //     last_message: { content, sender_id, created_at } | null
-    //   }
-    // The frontend (see hooks/useConversations.js) already checks for
-    // `other_user`/`last_message` and will pick them up automatically —
-    // no frontend changes needed once this ships.
-    // ------------------------------------------------------------------
   },
   MESSAGES: {
     SEND: '/api/message', // POST (protected) { conversationId, content }
     BY_CONVERSATION: (conversationId) => `/api/conversation/${conversationId}`, // GET (protected)
+    EDIT: (messageId) => `/api/message/${messageId}`, // PATCH (protected) { content } — not wired up in the UI yet
+    DELETE: (messageId) => `/api/message/${messageId}`, // DELETE (protected) — not wired up in the UI yet
   },
 };

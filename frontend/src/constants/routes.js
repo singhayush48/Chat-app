@@ -4,5 +4,6 @@ export const ROUTES = {
   REGISTER: '/register',
   HOME: '/',
   CONVERSATION: (conversationId) => `/c/${conversationId}`,
+  PROFILE: '/profile',
   NOT_FOUND: '*',
 };

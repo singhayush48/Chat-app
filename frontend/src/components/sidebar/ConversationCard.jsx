@@ -1,36 +1,35 @@
 import { NavLink } from 'react-router-dom';
 import { Avatar } from '@/components/common/Avatar';
 import { OnlineStatusDot } from '@/components/common/OnlineStatusDot';
-import { formatMessageTime } from '@/utils/formatTime';
+import { formatMessageTime, formatLastSeen } from '@/utils/formatTime';
 import { cn } from '@/utils/cn';
 
 /**
- * `conversation.other_user` / `conversation.last_message` only exist once
- * the backend ships the planned enrichment (see constants/endpoints.js).
- * Until then we fall back to a generic label rather than fabricating a
- * name or message preview.
+ * `conversation.other_user` / `conversation.last_message` come from the
+ * backend's enriched GET /api/auth/conversations. `other_user` can still
+ * be null for an edge case (e.g. the other member left), so we fall back
+ * to a generic label rather than crashing or fabricating a name.
  */
 export function ConversationCard({ conversation }) {
   const otherUser = conversation.other_user ?? null;
   const lastMessage = conversation.last_message ?? null;
-  const displayName = otherUser?.username ?? `Conversation`;
+  const displayName = otherUser?.username ?? 'Conversation';
+  const isOnline = Boolean(otherUser?.is_online);
+  const lastSeenText = !isOnline ? formatLastSeen(otherUser?.last_seen) : null;
 
   return (
     <NavLink
       to={`/c/${conversation.conversation_id}`}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors',
+          'group flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors',
           isActive ? 'bg-surface-elevated' : 'hover:bg-surface-elevated/60'
         )
       }
     >
       <div className="relative shrink-0">
         <Avatar name={otherUser?.username ?? '?'} src={otherUser?.profile_pic} size="md" />
-        <OnlineStatusDot
-          isOnline={otherUser?.isOnline}
-          className="absolute -bottom-0.5 -right-0.5"
-        />
+        <OnlineStatusDot isOnline={isOnline} className="absolute -bottom-0.5 -right-0.5" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
@@ -42,7 +41,7 @@ export function ConversationCard({ conversation }) {
           )}
         </div>
         <p className="truncate text-xs text-muted-foreground">
-          {lastMessage?.content ?? 'Tap to view messages'}
+          {lastMessage?.content ?? (isOnline ? 'Online' : lastSeenText) ?? 'Tap to view messages'}
         </p>
       </div>
     </NavLink>

@@ -1,27 +1,34 @@
+import { useState } from 'react';
 import { getInitials } from '@/utils/initials';
 import { getAvatarColor } from '@/utils/avatarColor';
+import { resolveMediaUrl } from '@/utils/resolveUrl';
 import { cn } from '@/utils/cn';
 
 const SIZES = {
   sm: 'h-8 w-8 text-xs',
   md: 'h-10 w-10 text-sm',
   lg: 'h-12 w-12 text-base',
+  xl: 'h-20 w-20 text-2xl',
 };
 
 /**
- * `profile_pic` comes from the `users` table when the backend sets it
- * (see USERS.UPDATE_AVATAR in constants/endpoints.js — not implemented
- * server-side yet, so this will render initials for every user today).
+ * `src` is a `profile_pic` value straight from the API — a server-relative
+ * path like "/uploads/xyz.jpg" — resolved here against the API origin.
+ * Falls back to a deterministic initials avatar if there's no picture, or
+ * if the image fails to load (e.g. a stale/broken path).
  */
 export function Avatar({ name, src, size = 'md', className }) {
+  const [failed, setFailed] = useState(false);
   const initials = getInitials(name);
   const bgColor = getAvatarColor(name || 'user');
+  const resolvedSrc = resolveMediaUrl(src);
 
-  if (src) {
+  if (resolvedSrc && !failed) {
     return (
       <img
-        src={src}
+        src={resolvedSrc}
         alt={name}
+        onError={() => setFailed(true)}
         className={cn('shrink-0 rounded-full object-cover', SIZES[size], className)}
       />
     );

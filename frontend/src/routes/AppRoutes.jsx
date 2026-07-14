@@ -16,6 +16,7 @@ const EmptyChatScreen = lazy(() =>
   import('@/pages/EmptyChatScreen').then((m) => ({ default: m.EmptyChatScreen }))
 );
 const ChatConversation = lazy(() => import('@/pages/ChatConversation'));
+const Profile = lazy(() => import('@/pages/Profile'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 export function AppRoutes() {
@@ -32,6 +33,7 @@ export function AppRoutes() {
             <Route index element={<EmptyChatScreen />} />
             <Route path="c/:conversationId" element={<ChatConversation />} />
           </Route>
+          <Route path={ROUTES.PROFILE} element={<Profile />} />
         </Route>
 
         <Route path={ROUTES.NOT_FOUND} element={<NotFound />} />

@@ -84,7 +84,7 @@ const sendMessage = async (conversationId, senderId, content) => {
             `
             INSERT INTO messages
             (conversation_id, sender_id, content, message_type)
-            VALUES($1, $2, $3, 'TEXT')
+            VALUES($1, $2, $3, 'text')
             RETURNING *
             `,
             [conversationId, senderId, content]
@@ -158,10 +158,100 @@ const getConversationById = async (conversationId) => {
     );
 };
 
+const deleteMessage = async (messageId, userId) => {
+
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+        const message = await client.query(
+            `
+            SELECT *
+            FROM messages
+            WHERE message_id = $1
+            `,
+            [messageId]
+        );
+
+        if (message.rows.length === 0) {
+            await client.query("ROLLBACK");
+            return { status: 404, message: "Message not found" };
+        }
+
+        if (message.rows[0].sender_id !== userId) {
+            await client.query("ROLLBACK");
+            return { status: 403, message: "You are not the sender of this message" };
+        }
+
+        await client.query(
+            `
+            UPDATE messages
+            SET is_deleted = TRUE,
+                deleted_at = CURRENT_TIMESTAMP
+            WHERE message_id = $1
+            `,
+            [messageId]
+        );
+
+        await client.query("COMMIT");
+        return { status: 200, message: "Message deleted successfully" };
+    } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+const editMessage = async (messageId, userId, newContent) => {
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+
+        const message = await client.query(
+            `
+            SELECT *
+            FROM messages
+            WHERE message_id = $1
+            `,
+            [messageId]
+        );
+
+        if (message.rows.length === 0) {
+            await client.query("ROLLBACK");
+            return { status: 404, message: "Message not found" };
+        }
+
+        if (message.rows[0].sender_id !== userId) {
+            await client.query("ROLLBACK");
+            return { status: 403, message: "You are not the sender of this message" };
+        }
+
+        await client.query(
+            `
+            UPDATE messages
+            SET content = $1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE message_id = $2
+            `,
+            [newContent, messageId]
+        );
+
+        await client.query("COMMIT");
+        return { status: 200, message: "Message edited successfully" };
+    } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+    } finally {
+        client.release();
+    }
+};
+
 module.exports = {
     createConversation,
     sendMessage,
     getConversationById,
     isConversationMember,
-    findPrivateConversation
+    findPrivateConversation,
+    deleteMessage,
+    editMessage
 };

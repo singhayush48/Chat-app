@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { registerUser, loginUser ,getUserProfile,logoutUser,getAllUsers,getAllConversations} = require('../controllers/authController');
+const { getUserProfile, getAllUsers, getAllConversations } = require('../controllers/authController');
 const authmiddleware = require('../middleware/authMiddleware');
 
 router.get('/health', (req, res) => {
@@ -7,8 +7,7 @@ router.get('/health', (req, res) => {
 });
 
 router.get('/me', authmiddleware, getUserProfile);
-
-router.get('/conversations', authmiddleware,getAllConversations);
-router.get('/users',authmiddleware,getAllUsers);
+router.get('/conversations', authmiddleware, getAllConversations);
+router.get('/users', authmiddleware, getAllUsers);
 
 module.exports = router;

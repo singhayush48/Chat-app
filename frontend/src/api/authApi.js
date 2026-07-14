@@ -34,8 +34,8 @@ export const authApi = {
    * of the app can treat `getMe()` as returning a plain user object or
    * null — if the backend is fixed later, update this one line.
    */
-  getMe: async (config = {}) => {
-    const { data } = await axiosInstance.get(ENDPOINTS.AUTH.ME, config);
-    return data?.user?.rows?.[0] ?? null;
-  },
+ getMe: async (config = {}) => {
+  const { data } = await axiosInstance.get(ENDPOINTS.AUTH.ME, config);
+  return data.user;
+}
 };

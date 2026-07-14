@@ -23,10 +23,6 @@ export const usersApi = {
     }
   },
 
-  /**
-   * PLANNED — backend does not implement this route yet. See
-   * constants/endpoints.js for the exact contract to build.
-   */
   updateProfile: async ({ username, phone, bio }) => {
     const { data } = await axiosInstance.patch(ENDPOINTS.USERS.UPDATE_ME, {
       username,
@@ -36,9 +32,6 @@ export const usersApi = {
     return data.user;
   },
 
-  /**
-   * PLANNED — backend does not implement this route yet.
-   */
   updateAvatar: async (file) => {
     const formData = new FormData();
     formData.append('avatar', file);

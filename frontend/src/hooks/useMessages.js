@@ -53,5 +53,58 @@ export function useMessages(conversationId) {
     [conversationId]
   );
 
-  return { messages, isLoading, error, isSending, sendMessage, refetch: fetchMessages };
+  const editMessage = useCallback(async (messageId, content) => {
+    // Optimistic: flip the bubble to the new content immediately, roll
+    // back if the request fails.
+    let previous;
+    setResult((prev) => {
+      previous = prev.messages;
+      return {
+        ...prev,
+        messages: prev.messages.map((m) =>
+          (m.message_id ?? m.id) === messageId
+            ? { ...m, content, updated_at: new Date().toISOString() }
+            : m
+        ),
+      };
+    });
+    try {
+      await messagesApi.edit(messageId, content);
+    } catch (err) {
+      setResult((prev) => ({ ...prev, messages: previous }));
+      throw err;
+    }
+  }, []);
+
+  const deleteMessage = useCallback(async (messageId) => {
+    let previous;
+    setResult((prev) => {
+      previous = prev.messages;
+      return {
+        ...prev,
+        messages: prev.messages.map((m) =>
+          (m.message_id ?? m.id) === messageId
+            ? { ...m, is_deleted: true, content: '' }
+            : m
+        ),
+      };
+    });
+    try {
+      await messagesApi.remove(messageId);
+    } catch (err) {
+      setResult((prev) => ({ ...prev, messages: previous }));
+      throw err;
+    }
+  }, []);
+
+  return {
+    messages,
+    isLoading,
+    error,
+    isSending,
+    sendMessage,
+    editMessage,
+    deleteMessage,
+    refetch: fetchMessages,
+  };
 }

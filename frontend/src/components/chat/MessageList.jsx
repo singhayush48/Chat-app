@@ -5,7 +5,7 @@ import { ErrorScreen } from '@/components/common/ErrorScreen';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/utils/cn';
 
-export function MessageList({ messages, isLoading, error, onRetry }) {
+export function MessageList({ messages, isLoading, error, onRetry, onEditMessage, onDeleteMessage }) {
   const { user } = useAuth();
   const bottomRef = useRef(null);
 
@@ -44,6 +44,8 @@ export function MessageList({ messages, isLoading, error, onRetry }) {
             <MessageBubble
               message={message}
               isOwn={String(message.sender_id) === String(user?.user_id)}
+              onEdit={onEditMessage}
+              onDelete={onDeleteMessage}
             />
           </div>
         );

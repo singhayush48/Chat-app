@@ -16,4 +16,14 @@ export const messagesApi = {
     );
     return data.conversation; // backend key is `conversation`, holds the message rows
   },
+
+  edit: async (messageId, content) => {
+    await axiosInstance.patch(ENDPOINTS.MESSAGES.EDIT(messageId), { content });
+    // Backend only returns { success, message } (no updated row), so the
+    // caller applies the new content/edited state to local state itself.
+  },
+
+  remove: async (messageId) => {
+    await axiosInstance.delete(ENDPOINTS.MESSAGES.DELETE(messageId));
+  },
 };

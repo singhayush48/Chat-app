@@ -31,6 +31,19 @@ export function formatFullTimestamp(dateInput) {
   });
 }
 
+/**
+ * The backend has no dedicated `is_edited` flag — editMessage only bumps
+ * `updated_at`. So "edited" is derived: any gap between created_at and
+ * updated_at (beyond clock/serialization noise) means the content changed.
+ */
+export function wasEdited(message) {
+  if (!message?.updated_at || !message?.created_at) return false;
+  const created = new Date(message.created_at).getTime();
+  const updated = new Date(message.updated_at).getTime();
+  if (Number.isNaN(created) || Number.isNaN(updated)) return false;
+  return updated - created > 1000;
+}
+
 /** "last seen 5 minutes ago" / "last seen yesterday" style text. */
 export function formatLastSeen(dateInput) {
   if (!dateInput) return null;

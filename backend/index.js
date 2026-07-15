@@ -1,7 +1,8 @@
 const express = require('express');
 const app = express();
 const port = 3000;
-
+const server = require('http').createServer(app);
+const { initSocket } = require('./sockets/socket');
 const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoute');
 const messagesRoutes = require('./routes/messageRoute.js');
@@ -31,6 +32,11 @@ app.get('/', (req, res) => {
   res.send('Hello, World!');
 });
 
-app.listen(port, () => {
+// Socket.IO is attached to the same HTTP server Express uses, so both
+// share one port. See sockets/socket.js for everything event-related
+// (auth, presence, conversation rooms, typing indicators, etc).
+initSocket(server);
+
+server.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });

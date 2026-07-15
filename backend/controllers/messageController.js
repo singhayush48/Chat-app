@@ -1,4 +1,5 @@
 const messageModel = require("../models/conversationModel");
+const { emitToConversation, emitToUser } = require("../sockets/socket");
 
 const createConversation = async (req, res) => {
     const { userId, username } = req.body;
@@ -18,6 +19,15 @@ const createConversation = async (req, res) => {
     }
 
     const result = await messageModel.createConversation(senderId, userId);
+
+    // Let the other participant know a new conversation exists, in real
+    // time, in case they're online right now (e.g. so their conversation
+    // list can refresh without the user having to reload the page).
+    emitToUser(userId, "conversation:created", {
+        conversationId: result,
+        createdBy: senderId,
+    });
+
     return res.status(201).json({ message: "Conversation created", conversationId: result });
 };
 
@@ -41,11 +51,22 @@ const sendMessage = async (req, res) => {
         }
 
         const response = await messageModel.sendMessage(conversationId, senderId, content);
+        const newMessage = response.rows[0];
+
+        // Real-time delivery: anyone with this conversation's room open
+        // (see "conversation:join" in sockets/socket.js) gets the message
+        // instantly, instead of waiting to poll or refresh. REST remains
+        // the source of truth for persistence — this is purely the live
+        // delivery layer on top of it.
+        emitToConversation(conversationId, "message:new", {
+            conversationId,
+            message: newMessage,
+        });
 
         return res.status(201).json({
             success: true,
             message: "Message sent successfully",
-            data: response.rows[0],
+            data: newMessage,
         });
     } catch (err) {
         console.error(err);
@@ -92,6 +113,11 @@ const deleteMessage = async (req, res) => {
             return res.status(result.status).json({ message: result.message });
         }
 
+        emitToConversation(result.conversationId, "message:deleted", {
+            conversationId: result.conversationId,
+            messageId,
+        });
+
         return res.status(200).json({
             success: true,
             message: result.message,
@@ -121,6 +147,12 @@ const editMessage = async (req, res) => {
         if (result.status !== 200) {
             return res.status(result.status).json({ message: result.message });
         }
+
+        emitToConversation(result.conversationId, "message:edited", {
+            conversationId: result.conversationId,
+            messageId,
+            content,
+        });
 
         return res.status(200).json({
             success: true,

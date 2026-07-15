@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 dotenv.config();
+const { disconnectUserSockets } = require("../sockets/socket");
 
 const registerUser = async (req, res) => {
     try {
@@ -113,6 +114,16 @@ const logoutUser = async (req, res) => {
         // Update the user's online status in the database. Requires
         // authmiddleware on this route so req.user is populated.
         await userModel.logoutUser(req.user.userId);
+
+        // The httpOnly cookie is gone, but any open Socket.IO connections
+        // for this user would otherwise keep running (and keep them
+        // showing as "online") until they happen to disconnect on their
+        // own. Force them closed now so REST logout and socket state
+        // agree immediately. The socket's own "disconnect" handler will
+        // notice, but is a no-op here since logoutUser() above already
+        // set is_online = FALSE.
+        disconnectUserSockets(req.user.userId);
+
         return res.status(200).json({ message: "Logout successful" });
     } catch (err) {
         console.error(err);
@@ -199,6 +210,29 @@ const updateUserAvatar = async (req, res) => {
     }
 };
 
+/**
+ * Public profile lookup for the "view this user's profile" UI (chat
+ * header / avatar clicks). Reuses the same SAFE_USER_COLUMNS as
+ * getUserProfile, so it never leaks the password hash. Email is included
+ * since the frontend spec treats it as optional-if-available rather than
+ * something to hide from other users.
+ */
+const getUserById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await userModel.getUserById(id);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        return res.status(200).json({ user: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
 const getAllConversations = async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -268,6 +302,7 @@ module.exports = {
     loginUser,
     logoutUser,
     getUserProfile,
+    getUserById,
     updateUserProfile,
     updateUserAvatar,
     getAllUsers,

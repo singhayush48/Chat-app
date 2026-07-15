@@ -20,7 +20,7 @@ export function Modal({ open, onClose, title, children }) {
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -30,7 +30,7 @@ export function Modal({ open, onClose, title, children }) {
         aria-modal="true"
         aria-labelledby="modal-title"
         tabIndex={-1}
-        className="relative w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl focus:outline-none"
+        className="relative w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl focus:outline-none animate-scale-in"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 id="modal-title" className="text-base font-semibold text-foreground">

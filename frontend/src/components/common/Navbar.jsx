@@ -1,15 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, MessageCircle, Settings } from 'lucide-react';
+import { LogOut, User, Pencil, Camera } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar } from '@/components/common/Avatar';
 import { ProfileCard } from '@/components/common/ProfileCard';
+import { UserProfileDrawer } from '@/components/common/UserProfileDrawer';
+import { Modal } from '@/components/ui/modal';
+import { AvatarUploader } from '@/components/auth/AvatarUploader';
+import { Logo } from '@/components/common/Logo';
 import { ROUTES } from '@/constants/routes';
 
 export function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -25,12 +31,7 @@ export function Navbar() {
 
   return (
     <div className="flex items-center justify-between border-b border-border px-4 py-3">
-      <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-          <MessageCircle className="h-4 w-4 text-primary" aria-hidden="true" />
-        </div>
-        <span className="text-sm font-semibold text-foreground">Chat</span>
-      </div>
+      <Logo size="sm" />
 
       <div ref={menuRef} className="relative">
         <button
@@ -47,9 +48,21 @@ export function Navbar() {
         {menuOpen && (
           <div
             role="menu"
-            className="absolute right-0 top-full z-20 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-surface shadow-2xl"
+            className="absolute right-0 top-full z-20 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-surface shadow-2xl animate-scale-in origin-top-right"
           >
             <ProfileCard user={user} />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                setProfileOpen(true);
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-surface-elevated"
+            >
+              <User className="h-4 w-4" aria-hidden="true" />
+              View profile
+            </button>
             <button
               type="button"
               role="menuitem"
@@ -59,8 +72,20 @@ export function Navbar() {
               }}
               className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-surface-elevated"
             >
-              <Settings className="h-4 w-4" aria-hidden="true" />
-              View profile
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+              Edit profile
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                setAvatarModalOpen(true);
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-surface-elevated"
+            >
+              <Camera className="h-4 w-4" aria-hidden="true" />
+              Change profile picture
             </button>
             <button
               type="button"
@@ -74,6 +99,20 @@ export function Navbar() {
           </div>
         )}
       </div>
+
+      <UserProfileDrawer
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        user={user}
+      />
+
+      <Modal
+        open={avatarModalOpen}
+        onClose={() => setAvatarModalOpen(false)}
+        title="Change profile picture"
+      >
+        <AvatarUploader />
+      </Modal>
     </div>
   );
 }

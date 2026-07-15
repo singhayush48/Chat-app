@@ -30,6 +30,10 @@ export const ENDPOINTS = {
     // CONVERSATIONS.LIST's `other_user`. Kept here for any future feature
     // that needs to check a specific user outside a conversation context.
     STATUS: (userId) => `/api/users/${userId}/status`, // GET (protected) -> { is_online, last_seen }
+
+    // Public profile lookup, used by the user profile drawer to fetch
+    // bio/email (not included in the conversations list payload).
+    BY_ID: (userId) => `/api/users/${userId}`, // GET (protected) -> { user }
   },
   CONVERSATIONS: {
     CREATE: '/api/conversation', // POST (protected) { userId, username }
@@ -44,7 +48,7 @@ export const ENDPOINTS = {
   MESSAGES: {
     SEND: '/api/message', // POST (protected) { conversationId, content }
     BY_CONVERSATION: (conversationId) => `/api/conversation/${conversationId}`, // GET (protected)
-    EDIT: (messageId) => `/api/message/${messageId}`, // PATCH (protected) { content } — not wired up in the UI yet
-    DELETE: (messageId) => `/api/message/${messageId}`, // DELETE (protected) — not wired up in the UI yet
+    EDIT: (messageId) => `/api/message/${messageId}`, // PATCH (protected) { content }
+    DELETE: (messageId) => `/api/message/${messageId}`, // DELETE (protected)
   },
 };

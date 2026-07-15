@@ -23,6 +23,12 @@ export const usersApi = {
     }
   },
 
+  /** Public profile for the "view this user's profile" drawer. */
+  getById: async (userId) => {
+    const { data } = await axiosInstance.get(ENDPOINTS.USERS.BY_ID(userId));
+    return data.user;
+  },
+
   updateProfile: async ({ username, phone, bio }) => {
     const { data } = await axiosInstance.patch(ENDPOINTS.USERS.UPDATE_ME, {
       username,

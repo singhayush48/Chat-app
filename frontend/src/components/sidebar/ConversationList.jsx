@@ -16,17 +16,22 @@ export function ConversationList() {
 
   if (safeConversations.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 p-8 text-center">
-        <Inbox className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
-        <p className="text-sm text-muted-foreground">
-          No conversations yet. Search for someone to start chatting.
-        </p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center animate-fade-in">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-elevated">
+          <Inbox className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-foreground">No conversations yet</p>
+          <p className="mt-1 max-w-[15rem] text-xs text-muted-foreground">
+            Search for someone above to start your first chat.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <ul className="flex-1 space-y-0.5 overflow-y-auto p-2" aria-label="Conversations">
+    <ul className="flex-1 space-y-0.5 overflow-y-auto p-2 animate-fade-in" aria-label="Conversations">
       {safeConversations.map((conversation) => (
         <li key={conversation.conversation_id}>
           <ConversationCard conversation={conversation} />

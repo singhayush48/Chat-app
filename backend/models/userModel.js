@@ -1,7 +1,11 @@
 const pool = require("../db/db");
 
 // Columns safe to return to the client — never includes `password`.
-const SAFE_USER_COLUMNS = "user_id, username, email, phone, bio, profile_pic";
+// NOTE: is_online/last_seen were added here so profile lookups (self and
+// public) carry presence info too — previously only getAllConversations'
+// bespoke query selected them, which left GET /:id/status returning
+// undefined fields.
+const SAFE_USER_COLUMNS = "user_id, username, email, phone, bio, profile_pic, is_online, last_seen";
 
 const createUser = async (username, phone, email, password) => {
     return await pool.query(
@@ -21,6 +25,12 @@ const loginUser = async (email) => {
 
 const logoutUser = async (userId) => {
     await pool.query('UPDATE users SET is_online = FALSE, last_seen = NOW() WHERE user_id = $1', [userId]);
+};
+
+// Used by sockets/socket.js when a user's first socket connection comes in
+// (i.e. they weren't already online on another tab/device).
+const setUserOnline = async (userId) => {
+    await pool.query('UPDATE users SET is_online = TRUE WHERE user_id = $1', [userId]);
 };
 const getAllUsers = async () => {
     return await pool.query(`SELECT ${SAFE_USER_COLUMNS} FROM users`);
@@ -145,6 +155,7 @@ module.exports = {
     createUser,
     loginUser,
     logoutUser,
+    setUserOnline,
     getUserById,
     updateUserProfile,
     updateUserAvatar,

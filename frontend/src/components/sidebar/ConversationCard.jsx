@@ -16,13 +16,20 @@ export function ConversationCard({ conversation }) {
   const displayName = otherUser?.username ?? 'Conversation';
   const isOnline = Boolean(otherUser?.is_online);
   const lastSeenText = !isOnline ? formatLastSeen(otherUser?.last_seen) : null;
+  const lastMessagePreview = lastMessage?.is_deleted
+    ? 'This message was deleted.'
+    : (lastMessage?.content ?? (isOnline ? 'Online' : lastSeenText) ?? 'Tap to view messages');
+
+  // UI-only placeholder: the backend doesn't send an unread count today,
+  // so this only ever renders once `conversation.unread_count` exists.
+  const unreadCount = conversation.unread_count ?? 0;
 
   return (
     <NavLink
       to={`/c/${conversation.conversation_id}`}
       className={({ isActive }) =>
         cn(
-          'group flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors',
+          'group flex items-center gap-3 rounded-xl px-2.5 py-3 transition-colors duration-150',
           isActive ? 'bg-surface-elevated' : 'hover:bg-surface-elevated/60'
         )
       }
@@ -40,9 +47,14 @@ export function ConversationCard({ conversation }) {
             </span>
           )}
         </div>
-        <p className="truncate text-xs text-muted-foreground">
-          {lastMessage?.content ?? (isOnline ? 'Online' : lastSeenText) ?? 'Tap to view messages'}
-        </p>
+        <div className="mt-0.5 flex items-center justify-between gap-2">
+          <p className="truncate text-xs text-muted-foreground">{lastMessagePreview}</p>
+          {unreadCount > 0 && (
+            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </div>
       </div>
     </NavLink>
   );

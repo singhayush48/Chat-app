@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Search, X, Loader2 } from 'lucide-react';
+import { Search, X, Loader2, UserSearch } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { usersApi } from '@/api/usersApi';
@@ -108,14 +108,17 @@ export function SearchBar() {
       </div>
 
       {showDropdown && (
-        <div className="absolute left-3 right-3 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-lg border border-border bg-surface shadow-2xl">
+        <div className="absolute left-3 right-3 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-lg border border-border bg-surface shadow-2xl animate-scale-in origin-top">
           {isSearching ? (
             <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               Searching…
             </div>
           ) : results.length === 0 ? (
-            <p className="p-4 text-center text-sm text-muted-foreground">No people found.</p>
+            <div className="flex flex-col items-center gap-2 p-6 text-center">
+              <UserSearch className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+              <p className="text-sm text-muted-foreground">No people found for &ldquo;{query.trim()}&rdquo;.</p>
+            </div>
           ) : (
             <ul role="listbox">
               {results.map((person) => (

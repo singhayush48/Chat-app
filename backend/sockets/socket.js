@@ -20,7 +20,9 @@
  *   - "conversation:leave"  { conversationId }
  *   - "typing:start"        { conversationId }
  *   - "typing:stop"         { conversationId }
- *   - "message:read"        { conversationId, messageId }
+ *   - "message:delivered"   { messageId, conversationId }
+ *   - "message:seen"        { conversationId }
+ *   - "message:read"        { conversationId, messageId }   (legacy live-only broadcast, see note below)
  *
  * Server -> Client events emitted here / from controllers:
  *   - "presence:online_contacts" { userIds: [...] }   (sent on connect)
@@ -31,6 +33,7 @@
  *   - "typing:start"              { conversationId, userId }
  *   - "typing:stop"               { conversationId, userId }
  *   - "message:read"              { conversationId, messageId, userId }
+ *   - "message:statusUpdated"     { messageId, status: "DELIVERED" } | { conversationId, status: "SEEN" }
  *   - "message:new"                { conversationId, message }   (from messageController)
  *   - "message:edited"             { conversationId, messageId, content } (from messageController)
  *   - "message:deleted"            { conversationId, messageId }          (from messageController)
@@ -141,6 +144,20 @@ async function handleConnection(socket) {
     await broadcastPresenceToContacts(userId, "user:online", { userId });
   }
 
+  // Join every conversation this user is a member of, not just whichever
+  // one they explicitly open. Without this, message:new / delivered /
+  // seen events (and the sidebar-preview updates that ride on message:new)
+  // would only reach a client for the single chat currently on screen —
+  // delivery receipts in particular need to fire the moment a message
+  // reaches the recipient's device, regardless of which chat they're
+  // looking at.
+  try {
+    const memberships = await conversationModel.getUserConversationIds(userId);
+    memberships.forEach((row) => socket.join(conversationRoom(row.conversation_id)));
+  } catch (err) {
+    console.error("Failed to auto-join conversation rooms:", err);
+  }
+
   // Let this freshly-connected socket know which of ITS contacts are
   // currently online, so the client can paint presence dots immediately
   // instead of waiting for a "user:online" event that may never come
@@ -198,6 +215,66 @@ async function handleConnection(socket) {
       userId,
     });
   });
+
+  socket.on("message:delivered", async ({ messageId, conversationId } = {}) => {
+
+   
+    if (!messageId || !conversationId) return;
+
+    try {
+      const membership = await conversationModel.isConversationMember(conversationId, userId);
+      if (membership.rows.length === 0) {
+        return socket.emit("conversation:error", {
+          message: "You are not a member of this conversation",
+        });
+      }
+      
+      const senderLookup = await conversationModel.getMessageSenderId(messageId);
+      if (senderLookup.rows.length === 0) {
+        return socket.emit("conversation:error", { message: "Message not found" });
+      }
+      const senderId = senderLookup.rows[0].sender_id;
+
+      await conversationModel.updateMessageStatus(messageId, "DELIVERED");
+
+      // Only the sender cares about this — it's their own message that
+      // just got confirmed as delivered.
+      emitToUser(senderId, "message:statusUpdated", {
+        messageId,
+        status: "DELIVERED",
+      });
+    } catch (err) {
+      console.error("message:delivered error:", err);
+    }
+  });
+
+socket.on("message:seen", async ({ conversationId } = {}) => {
+    if (!conversationId) return;
+
+    try {
+        // 1. Verify membership
+        const membership = await conversationModel.isConversationMember(conversationId, userId);
+        if (membership.rows.length === 0) {
+            return socket.emit("conversation:error", {
+                message: "You are not a member of this conversation",
+            });
+        }
+        // 2. Mark all unread messages in this conversation as SEEN
+        const result = await conversationModel.markMessagesAsSeen(conversationId, userId);
+        // 3. Notify each distinct sender whose messages just got marked
+        // seen (there's only ever one "other" participant in a private
+        // conversation, but this stays correct if/when group chats land).
+        const senderIds = new Set(result.rows.map((row) => row.sender_id));
+        senderIds.forEach((senderId) => {
+            emitToUser(senderId, "message:statusUpdated", {
+                conversationId,
+                status: "SEEN",
+            });
+        });
+    } catch (err) {
+        console.error("message:seen error:", err);
+    }
+});
 
   // --- read receipts (live-only for now) ---------------------------------
   // There's no `is_read`/`read_at` column on `messages` yet, so this is a

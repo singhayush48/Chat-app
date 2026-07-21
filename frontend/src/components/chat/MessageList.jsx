@@ -5,13 +5,31 @@ import { ErrorScreen } from '@/components/common/ErrorScreen';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/utils/cn';
 
-export function MessageList({ messages, isLoading, error, onRetry, onEditMessage, onDeleteMessage }) {
+export function MessageList({
+  messages,
+  isLoading,
+  error,
+  onRetry,
+  onEditMessage,
+  onDeleteMessage,
+  activeSearchMessageId,
+}) {
   const { user } = useAuth();
   const bottomRef = useRef(null);
 
   useEffect(() => {
+    // Search takes over scroll position while it's active — don't fight
+    // it by also auto-scrolling to the bottom on every message change.
+    if (activeSearchMessageId) return;
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, activeSearchMessageId]);
+
+  useEffect(() => {
+    if (!activeSearchMessageId) return;
+    document
+      .getElementById(`message-${activeSearchMessageId}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [activeSearchMessageId]);
 
   if (isLoading) return <MessageListSkeleton />;
 
@@ -36,10 +54,19 @@ export function MessageList({ messages, isLoading, error, onRetry, onEditMessage
         // Tighter spacing between consecutive messages from the same
         // sender (a "burst"); more breathing room when the sender changes.
         const isSameSenderAsPrev = prevMessage && String(prevMessage.sender_id) === String(message.sender_id);
+        const messageKey = message.message_id ?? message.id;
+        const isActiveSearchResult =
+          activeSearchMessageId != null && messageKey === activeSearchMessageId;
 
         return (
-          <div key={message.message_id ?? message.id ?? `${message.sender_id}-${message.created_at}`}
-            className={cn(isSameSenderAsPrev ? 'mt-1' : 'mt-4', index === 0 && 'mt-0')}
+          <div
+            key={messageKey ?? `${message.sender_id}-${message.created_at}`}
+            id={messageKey != null ? `message-${messageKey}` : undefined}
+            className={cn(
+              isSameSenderAsPrev ? 'mt-1' : 'mt-4',
+              index === 0 && 'mt-0',
+              isActiveSearchResult && 'rounded-xl ring-2 ring-primary ring-offset-2 ring-offset-background transition-all'
+            )}
           >
             <MessageBubble
               message={message}

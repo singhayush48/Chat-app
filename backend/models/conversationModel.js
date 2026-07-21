@@ -258,7 +258,48 @@ const editMessage = async (messageId, userId, newContent) => {
     }
 };
 
+const updateMessageStatus = async (messageId, status) => {
+    return await pool.query(
+        `
+        UPDATE messages
+        SET status = $1
+        WHERE message_id = $2
+        `,
+        [status, messageId]
+    );
+};
+
+/** Used by the "message:delivered" socket handler to know who to notify. */
+const getMessageSenderId = async (messageId) => {
+    return await pool.query(
+        `
+        SELECT sender_id
+        FROM messages
+        WHERE message_id = $1
+        `,
+        [messageId]
+    );
+};
+
+const markMessagesAsSeen=async (conversationId, userId) => {
+    // RETURNING sender_id so the "message:seen" socket handler knows
+    // exactly which sender(s) to notify — without this, the caller has no
+    // way to find out who sent the messages that just got marked seen.
+    return await pool.query(
+        `
+        UPDATE messages
+        SET status = 'SEEN'
+        WHERE conversation_id = $1
+        AND sender_id != $2
+        AND status != 'SEEN'
+        RETURNING message_id, sender_id
+        `,
+        [conversationId, userId]
+    );
+};
 /**
+ * 
+ * 
  * Returns the distinct set of "other user" ids that `userId` shares a
  * private conversation with. Used purely for scoping real-time presence
  * broadcasts (user:online / user:offline) — so a user's online status is
@@ -282,6 +323,25 @@ const getContactIds = async (userId) => {
     ).then((result) => result.rows);
 };
 
+/**
+ * All conversation ids a user belongs to. Used to auto-join their socket
+ * to every one of their conversation rooms on connect (see
+ * sockets/socket.js), so message:new / status updates reach them even
+ * for conversations they haven't explicitly opened yet — otherwise
+ * delivery receipts and sidebar previews would only work for whichever
+ * single chat happens to be open.
+ */
+const getUserConversationIds = async (userId) => {
+    return await pool.query(
+        `
+        SELECT conversation_id
+        FROM conversation_members
+        WHERE user_id = $1
+        `,
+        [userId]
+    ).then((result) => result.rows);
+};
+
 module.exports = {
     createConversation,
     sendMessage,
@@ -291,4 +351,8 @@ module.exports = {
     deleteMessage,
     editMessage,
     getContactIds,
+    getUserConversationIds,
+    updateMessageStatus,
+    getMessageSenderId,
+    markMessagesAsSeen,
 };

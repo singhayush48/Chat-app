@@ -1,18 +1,32 @@
-import { useState } from 'react';
-import { Send } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Send, Smile } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
+import { EmojiPicker } from '@/components/chat/EmojiPicker';
 import { getErrorMessage } from '@/utils/errorMessage';
 import { cn } from '@/utils/cn';
 
-export function MessageInput({ onSend, isSending }) {
+export function MessageInput({ onSend, isSending, onTypingStart, onTypingStop }) {
   const [value, setValue] = useState('');
   const [justSent, setJustSent] = useState(false);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const textareaRef = useRef(null);
+
+  const handleChange = (e) => {
+    const next = e.target.value;
+    setValue(next);
+    if (next.trim()) {
+      onTypingStart?.();
+    } else {
+      onTypingStop?.();
+    }
+  };
 
   const handleSend = async () => {
     const content = value.trim();
     if (!content || isSending) return;
     setValue('');
+    onTypingStop?.();
     try {
       await onSend(content);
       setJustSent(true);
@@ -30,11 +44,51 @@ export function MessageInput({ onSend, isSending }) {
     }
   };
 
+  // Inserts at the cursor (not just appended to the end) so picking an
+  // emoji mid-sentence lands where the caret actually is.
+  const insertEmoji = (emoji) => {
+    const textarea = textareaRef.current;
+    const start = textarea?.selectionStart ?? value.length;
+    const end = textarea?.selectionEnd ?? value.length;
+    const next = value.slice(0, start) + emoji + value.slice(end);
+    setValue(next);
+    onTypingStart?.();
+    setEmojiPickerOpen(false);
+
+    // Restore focus + move the caret to just after the inserted emoji.
+    // Has to wait a tick for React to flush the new value into the DOM.
+    requestAnimationFrame(() => {
+      textarea?.focus();
+      const cursor = start + emoji.length;
+      textarea?.setSelectionRange(cursor, cursor);
+    });
+  };
+
   return (
     <div className="flex items-end gap-2 border-t border-border p-3">
+      <div className="relative shrink-0">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => setEmojiPickerOpen((prev) => !prev)}
+          aria-label="Insert emoji"
+          aria-haspopup="dialog"
+          aria-expanded={emojiPickerOpen}
+        >
+          <Smile className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+        </Button>
+        {emojiPickerOpen && (
+          <div className="absolute bottom-full left-0 mb-2 z-20">
+            <EmojiPicker onSelect={insertEmoji} onClose={() => setEmojiPickerOpen(false)} />
+          </div>
+        )}
+      </div>
+
       <textarea
+        ref={textareaRef}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder="Type a message…"
         rows={1}

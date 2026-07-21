@@ -1,11 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreVertical, Pencil, Trash2, Check, X as XIcon } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, Check, CheckCheck, X as XIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { formatMessageTime, formatFullTimestamp, wasEdited } from '@/utils/formatTime';
 import { getErrorMessage } from '@/utils/errorMessage';
+import { normalizeMessageStatus } from '@/utils/messageStatus';
 import { cn } from '@/utils/cn';
+
+/** Small WhatsApp/Telegram-style sent/delivered/seen indicator, own messages only. */
+function StatusTicks({ status, className }) {
+  const normalized = normalizeMessageStatus(status);
+  if (normalized === 'sent') {
+    return <Check className={cn('h-3 w-3', className)} aria-label="Sent" />;
+  }
+  return (
+    <CheckCheck
+      className={cn('h-3 w-3', normalized === 'seen' && 'text-sky-400', className)}
+      aria-label={normalized === 'seen' ? 'Seen' : 'Delivered'}
+    />
+  );
+}
 
 export function MessageBubble({ message, isOwn, onEdit, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -149,60 +164,63 @@ export function MessageBubble({ message, isOwn, onEdit, onDelete }) {
         </div>
       )}
 
-      <div
-        className={cn(
-          'max-w-[75%] rounded-2xl px-3.5 py-2 text-sm shadow-sm animate-message-in',
-          isOwn
-            ? 'rounded-br-sm bg-primary text-primary-foreground'
-            : 'rounded-bl-sm bg-surface-elevated text-foreground'
-        )}
-      >
-        {isEditing ? (
-          <div className="min-w-[10rem] space-y-2">
-            <textarea
-              ref={textareaRef}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={handleEditKeyDown}
-              rows={1}
-              aria-label="Edit message"
-              className="w-full resize-none rounded-md border border-primary-foreground/30 bg-transparent px-2 py-1 text-sm text-primary-foreground placeholder:text-primary-foreground/60 focus:outline-none"
-            />
-            <div className="flex items-center justify-end gap-1.5">
-              <button
-                type="button"
-                onClick={cancelEdit}
-                aria-label="Cancel edit"
-                className="rounded-md p-1 text-primary-foreground/80 transition-colors hover:bg-black/10"
-              >
-                <XIcon className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                onClick={saveEdit}
-                disabled={isSaving}
-                aria-label="Save edit"
-                className="rounded-md p-1 text-primary-foreground/80 transition-colors hover:bg-black/10 disabled:opacity-50"
-              >
-                <Check className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
+      <div className={cn('flex max-w-[75%] flex-col', isOwn ? 'items-end' : 'items-start')}>
+        <div
+          className={cn(
+            'rounded-2xl px-3.5 py-2 text-sm shadow-sm animate-message-in',
+            isOwn
+              ? 'rounded-br-sm bg-primary text-primary-foreground'
+              : 'rounded-bl-sm bg-surface-elevated text-foreground'
+          )}
+        >
+          {isEditing ? (
+            <div className="min-w-[10rem] space-y-2">
+              <textarea
+                ref={textareaRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={handleEditKeyDown}
+                rows={1}
+                aria-label="Edit message"
+                className="w-full resize-none rounded-md border border-primary-foreground/30 bg-transparent px-2 py-1 text-sm text-primary-foreground placeholder:text-primary-foreground/60 focus:outline-none"
+              />
+              <div className="flex items-center justify-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  aria-label="Cancel edit"
+                  className="rounded-md p-1 text-primary-foreground/80 transition-colors hover:bg-black/10"
+                >
+                  <XIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={saveEdit}
+                  disabled={isSaving}
+                  aria-label="Save edit"
+                  className="rounded-md p-1 text-primary-foreground/80 transition-colors hover:bg-black/10 disabled:opacity-50"
+                >
+                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <>
-            <p className="whitespace-pre-wrap break-words">{message.content}</p>
-            <p
-              title={formatFullTimestamp(message.created_at)}
-              className={cn(
-                'mt-1 flex items-center justify-end gap-1 text-right text-[10px]',
-                isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
-              )}
-            >
-              {wasEdited(message) && <span>(Edited)</span>}
-              {formatMessageTime(message.created_at)}
-            </p>
-          </>
-        )}
+          ) : (
+            <>
+              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              <p
+                title={formatFullTimestamp(message.created_at)}
+                className={cn(
+                  'mt-1 flex items-center justify-end gap-1 text-right text-[10px]',
+                  isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                )}
+              >
+                {wasEdited(message) && <span>(Edited)</span>}
+                {formatMessageTime(message.created_at)}
+                {isOwn && <StatusTicks status={message.status} />}
+              </p>
+            </>
+          )}
+        </div>
       </div>
 
       <Modal

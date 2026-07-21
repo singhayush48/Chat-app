@@ -1,9 +1,16 @@
 /**
- * Socket.IO client scaffold.
+ * Socket.IO client — single shared instance for the whole app.
  *
- * Per project spec: keep the structure ready, but do NOT connect or emit
- * anything until explicitly requested. `getSocket()` is intentionally not
- * called anywhere yet.
+ * Connection lifecycle is owned by SocketProvider (see
+ * context/SocketContext.jsx): it calls `getSocket().connect()` once the
+ * user is authenticated and `disconnectSocket()` on logout. Nothing else
+ * should call `.connect()` directly — always go through the provider /
+ * `useSocket()` so there's exactly one connection per session.
+ *
+ * Auth: the server's Socket.IO middleware reads the same httpOnly "token"
+ * cookie as REST requests (see backend/sockets/socket.js), so
+ * `withCredentials: true` here is what makes that cookie ride along on
+ * the handshake — no manual token wiring needed.
  */
 import { io } from 'socket.io-client';
 
@@ -15,7 +22,7 @@ export function getSocket() {
   if (!socket) {
     socket = io(SOCKET_URL, {
       withCredentials: true,
-      autoConnect: false, // caller decides when to connect
+      autoConnect: false, // caller (SocketProvider) decides when to connect
     });
   }
   return socket;

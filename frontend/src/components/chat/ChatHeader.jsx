@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Search } from 'lucide-react';
 import { Avatar } from '@/components/common/Avatar';
 import { OnlineStatusDot } from '@/components/common/OnlineStatusDot';
 import { UserProfileDrawer } from '@/components/common/UserProfileDrawer';
@@ -8,7 +8,7 @@ import { useConversation } from '@/hooks/useConversation';
 import { formatLastSeen } from '@/utils/formatTime';
 import { cn } from '@/utils/cn';
 
-export function ChatHeader() {
+export function ChatHeader({ searchOpen, onToggleSearch }) {
   const navigate = useNavigate();
   const { conversationId } = useParams();
   const { conversations } = useConversation();
@@ -58,6 +58,19 @@ export function ChatHeader() {
               </p>
             )}
           </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={onToggleSearch}
+          aria-label={searchOpen ? 'Close search' : 'Search this conversation'}
+          aria-pressed={searchOpen}
+          className={cn(
+            'shrink-0 rounded-md p-1.5 transition-colors hover:bg-surface-elevated hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            searchOpen ? 'text-foreground' : 'text-muted-foreground'
+          )}
+        >
+          <Search className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
 

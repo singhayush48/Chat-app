@@ -1,13 +1,12 @@
 /**
- * PLACEHOLDER per project spec. There is no "user is typing" signal from
- * the backend (would need the Socket.IO connection, which is
- * intentionally not turned on yet — see services/socket.js). This
- * component is ready to drop in once that event exists; nothing renders
- * it today.
+ * Shown in the open conversation while the other participant is typing.
+ * Driven by useMessages()'s `isOtherTyping`, which listens for the
+ * backend's "typing:start" / "typing:stop" Socket.IO events scoped to
+ * this conversation (see sockets/socket.js).
  */
 export function TypingIndicator({ name }) {
   return (
-    <div className="flex items-center gap-2 px-4 py-2 text-xs text-muted-foreground">
+    <div className="flex items-center gap-2 px-4 py-2 text-xs text-muted-foreground animate-fade-in">
       <span className="flex gap-1">
         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />

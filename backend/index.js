@@ -11,7 +11,7 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 
 app.use(cors({
-  origin: 'http://localhost:5173', // your Vite dev server URL
+  origin: 'https://chat-app-45hp.vercel.app/login', // your Vite dev server URL
   credentials: true
 }));
 

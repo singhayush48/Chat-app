@@ -9,12 +9,28 @@ const messagesRoutes = require('./routes/messageRoute.js');
 const userProfileRoutes = require('./routes/userProfileRoutes');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const allowedOrigins = require('./config/allowedOrigins');
+
+// Render terminates TLS at its edge and forwards to this app over plain
+// HTTP internally. Without `trust proxy`, Express has no way to know the
+// original request was actually HTTPS (req.secure, req.protocol, and any
+// `X-Forwarded-*`-based logic would be wrong). This doesn't affect the
+// `secure: true` cookie flag we set explicitly in authController.js, but
+// it's required for correctness of anything else that inspects the
+// protocol, and is standard practice for any Express app behind a proxy.
+app.set('trust proxy', 1);
 
 app.use(cors({
-  origin: 'https://vaani-chat-app-delta.vercel.app', // your Vite dev server URL
-  credentials: true
-}));
+  origin(origin, callback) {
+    // Allow requests without an Origin header (Postman, curl, health checks)
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
 
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
+  },
+  credentials: true,
+}));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

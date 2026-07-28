@@ -5,6 +5,49 @@ const dotenv = require("dotenv");
 dotenv.config();
 const { disconnectUserSockets } = require("../sockets/socket");
 
+/**
+ * The frontend (vercel.app) and backend (onrender.com) are different
+ * registrable domains, so this is a CROSS-SITE deployment, not just
+ * cross-origin. A cross-site cookie is only ever sent by the browser on
+ * XHR/fetch requests if it is set with `SameSite=None; Secure`. The
+ * default `SameSite=Lax` (what you get if you omit the option, which is
+ * what this file used to do) is silently dropped by Chrome/Edge on some
+ * requests and outright rejected by Safari/iOS and Android Chrome — that
+ * mismatch is exactly why login succeeded but every following request
+ * (including /api/auth/me) came back 401.
+ *
+ * `secure: true` is required by every browser whenever `sameSite: "none"`
+ * is used, and both of our real hosts (Vercel, Render) are HTTPS-only, so
+ * this is safe. Locally over http://localhost it's relaxed to `lax` so
+ * cookies still work for local dev without HTTPS.
+ *
+ * IMPORTANT: set NODE_ENV=production in Render's environment variables,
+ * or this will stay in "lax/insecure" dev mode in production.
+ */
+const IS_PROD = process.env.NODE_ENV === "production";
+
+const AUTH_COOKIE_NAME = "token";
+
+// Used when *setting* the cookie (login).
+const AUTH_COOKIE_OPTIONS = {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: IS_PROD ? "none" : "lax",
+    path: "/",
+    maxAge: 60 * 60 * 1000, // 1 hour — matches the JWT's expiresIn below
+};
+
+// Used when *clearing* the cookie (logout). Must NOT include maxAge, but
+// MUST match httpOnly/secure/sameSite/path exactly, or the browser will
+// treat it as a different cookie and refuse to delete the real one —
+// this is enforced strictly by Safari in particular.
+const CLEAR_COOKIE_OPTIONS = {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: IS_PROD ? "none" : "lax",
+    path: "/",
+};
+
 const registerUser = async (req, res) => {
     try {
         const { username, phone, email, password } = req.body;
@@ -100,12 +143,7 @@ const loginUser = async (req, res) => {
         const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, {
             expiresIn: "1h",
         });
-       res.cookie("token", token, {
-  httpOnly: true,
-  secure: true,
-  sameSite: "none",
-  maxAge: 1000 * 60 * 60, // 1 hour
-});
+        res.cookie("token", token, { httpOnly: true });
         return res.status(200).json({ message: "Login successful" });
     } catch (err) {
         console.error(err);
@@ -115,7 +153,7 @@ const loginUser = async (req, res) => {
 
 const logoutUser = async (req, res) => {
     try {
-        res.clearCookie("token");
+        res.clearCookie(AUTH_COOKIE_NAME, CLEAR_COOKIE_OPTIONS);
         // Update the user's online status in the database. Requires
         // authmiddleware on this route so req.user is populated.
         await userModel.logoutUser(req.user.userId);

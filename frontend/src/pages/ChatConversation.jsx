@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { Paperclip } from 'lucide-react';
 import { ChatHeader } from '@/components/chat/ChatHeader';
 import { MessageList } from '@/components/chat/MessageList';
 import { MessageInput } from '@/components/chat/MessageInput';
@@ -8,6 +9,7 @@ import { TypingIndicator } from '@/components/common/TypingIndicator';
 import { useMessages } from '@/hooks/useMessages';
 import { useConversation } from '@/hooks/useConversation';
 import { useMessageSearch } from '@/hooks/useMessageSearch';
+import { useMediaAttachment } from '@/hooks/useMediaAttachment';
 
 export default function ChatConversation() {
   const { conversationId } = useParams();
@@ -18,6 +20,7 @@ export default function ChatConversation() {
     error,
     isSending,
     sendMessage,
+    sendMedia,
     editMessage,
     deleteMessage,
     refetch,
@@ -26,7 +29,11 @@ export default function ChatConversation() {
     stopTyping,
   } = useMessages(conversationId);
 
+  const attachment = useMediaAttachment(sendMedia);
+
   const [searchOpen, setSearchOpen] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const dragCounterRef = useRef(0);
   const search = useMessageSearch(messages);
   const activeSearchMessageId = search.activeMessage
     ? (search.activeMessage.message_id ?? search.activeMessage.id)
@@ -69,13 +76,66 @@ export default function ChatConversation() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
+  // Dropping a file mid-upload/edit into a different conversation would be
+  // confusing — clear any pending attachment on conversation switch.
+  useEffect(() => {
+    let isMounted = true;
+    async function reset() {
+      await Promise.resolve();
+      if (!isMounted) return;
+      attachment.clear();
+      dragCounterRef.current = 0;
+      setIsDraggingFile(false);
+    }
+    reset();
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId]);
+
   const closeSearch = () => {
     setSearchOpen(false);
     search.clear();
   };
 
+  // Drag-and-drop: counts enter/leave events (rather than just using
+  // dragleave directly) because dragging over child elements fires
+  // enter/leave pairs for each of them, which would otherwise flicker
+  // the highlight on and off as the cursor crosses child boundaries.
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    if (!e.dataTransfer?.types?.includes('Files')) return;
+    dragCounterRef.current += 1;
+    setIsDraggingFile(true);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+    if (dragCounterRef.current === 0) setIsDraggingFile(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    setIsDraggingFile(false);
+    if (e.dataTransfer?.files?.length) attachment.pickFiles(e.dataTransfer.files);
+  };
+
   return (
-    <div key={conversationId} className="flex h-full flex-col animate-fade-in">
+    <div
+      key={conversationId}
+      className="relative flex h-full flex-col animate-fade-in"
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <ChatHeader searchOpen={searchOpen} onToggleSearch={() => setSearchOpen((prev) => !prev)} />
       {searchOpen && (
         <MessageSearchBar
@@ -103,7 +163,17 @@ export default function ChatConversation() {
         isSending={isSending}
         onTypingStart={startTyping}
         onTypingStop={stopTyping}
+        attachment={attachment}
       />
+
+      {isDraggingFile && (
+        <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center border-2 border-dashed border-primary bg-background/80 backdrop-blur-sm animate-fade-in">
+          <div className="flex flex-col items-center gap-2 text-primary">
+            <Paperclip className="h-8 w-8" aria-hidden="true" />
+            <p className="text-sm font-medium">Drop file to send</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

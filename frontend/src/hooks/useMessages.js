@@ -210,6 +210,28 @@ export function useMessages(conversationId) {
     [conversationId]
   );
 
+  const sendMedia = useCallback(
+    async (file, content, { onUploadProgress, signal } = {}) => {
+      const newMessage = await messagesApi.sendMedia({
+        conversationId,
+        file,
+        content,
+        onUploadProgress,
+        signal,
+      });
+      // Same de-dupe logic as sendMessage: the message:new socket event
+      // can arrive before this REST response resolves.
+      setResult((prev) => {
+        const messageId = newMessage.message_id ?? newMessage.id;
+        const alreadyExists = prev.messages.some((m) => (m.message_id ?? m.id) === messageId);
+        if (alreadyExists) return prev;
+        return { ...prev, messages: [...prev.messages, newMessage] };
+      });
+      return newMessage;
+    },
+    [conversationId]
+  );
+
   const editMessage = useCallback(async (messageId, content) => {
     // Optimistic: flip the bubble to the new content immediately, roll
     // back if the request fails.
@@ -284,6 +306,7 @@ export function useMessages(conversationId) {
     error,
     isSending,
     sendMessage,
+    sendMedia,
     editMessage,
     deleteMessage,
     refetch: fetchMessages,

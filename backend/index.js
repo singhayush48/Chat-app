@@ -37,6 +37,22 @@ app.get('/', (req, res) => {
 // (auth, presence, conversation rooms, typing indicators, etc).
 initSocket(server);
 
+// Last-resort safety net: must be registered after all routes. Without
+// this, an error that reaches Express's own default handler gets logged
+// as `err.stack || err.toString()` — for a plain (non-Error) object,
+// that's just "[object Object]" with no useful information — and the
+// response sent back is an HTML error page instead of the JSON the
+// frontend expects.
+app.use((err, req, res, next) => {
+  const message = err?.message || (typeof err === 'string' ? err : 'Internal server error');
+  console.error(`Unhandled error on ${req.method} ${req.originalUrl}:`, message);
+  if (err?.stack) console.error(err.stack);
+  else console.error(err);
+
+  res.status(err?.status || 500).json({ success: false, message });
+});
+
+
 server.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });

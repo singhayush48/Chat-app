@@ -72,7 +72,16 @@ const createConversation = async (senderId, receiverId) => {
     }
 };
 
-const sendMessage = async (conversationId, senderId, content) => {
+const saveMessage = async ({
+    conversationId,
+    senderId,
+    content = null,
+    messageType = "TEXT",
+    mediaUrl = null,
+    mediaName = null,
+    mediaSize = null,
+    mediaMimeType = null
+}) => {
 
     const client = await pool.connect();
 
@@ -82,12 +91,31 @@ const sendMessage = async (conversationId, senderId, content) => {
 
         const message = await client.query(
             `
-            INSERT INTO messages
-            (conversation_id, sender_id, content, message_type)
-            VALUES($1, $2, $3, 'text')
-            RETURNING *
+            INSERT INTO messages (
+                conversation_id,
+                sender_id,
+                content,
+                message_type,
+                media_url,
+                media_name,
+                media_size,
+                media_mime_type
+            )
+            VALUES (
+                $1,$2,$3,$4,$5,$6,$7,$8
+            )
+            RETURNING *;
             `,
-            [conversationId, senderId, content]
+            [
+                conversationId,
+                senderId,
+                content,
+                messageType,
+                mediaUrl,
+                mediaName,
+                mediaSize,
+                mediaMimeType
+            ]
         );
 
         await client.query(
@@ -101,7 +129,7 @@ const sendMessage = async (conversationId, senderId, content) => {
 
         await client.query("COMMIT");
 
-        return message;
+        return message.rows[0];
 
     } catch (err) {
 
@@ -323,6 +351,8 @@ const getContactIds = async (userId) => {
     ).then((result) => result.rows);
 };
 
+
+
 /**
  * All conversation ids a user belongs to. Used to auto-join their socket
  * to every one of their conversation rooms on connect (see
@@ -344,7 +374,7 @@ const getUserConversationIds = async (userId) => {
 
 module.exports = {
     createConversation,
-    sendMessage,
+    saveMessage,
     getConversationById,
     isConversationMember,
     findPrivateConversation,

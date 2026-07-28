@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const authmiddleware = require('../middleware/authMiddleware');
 const uploadAvatar = require('../middleware/uploadMiddleware');
+const handleUpload = require('../middleware/handleUpload');
 const { updateUserProfile, updateUserAvatar, isOnline, getUserById } = require('../controllers/authController');
 
 // PATCH /api/users/me        body: { username?, phone?, bio? }
@@ -14,6 +15,6 @@ router.get('/:id/status',authmiddleware,isOnline);
 router.get('/:id', authmiddleware, getUserById);
 
 // POST /api/users/me/avatar  multipart/form-data, field name "avatar"
-router.post('/me/avatar', authmiddleware, uploadAvatar.single('avatar'), updateUserAvatar);
+router.post('/me/avatar', authmiddleware, handleUpload(uploadAvatar.single('avatar')), updateUserAvatar);
 
 module.exports = router;

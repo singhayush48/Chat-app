@@ -47,6 +47,10 @@ export const ENDPOINTS = {
   },
   MESSAGES: {
     SEND: '/api/message', // POST (protected) { conversationId, content }
+    // multipart/form-data, field name "media" (+ conversationId, optional
+    // content as a caption). Backend returns { success, message: <messageRow> }
+    // (note: NOT wrapped in a `data` key like MESSAGES.SEND is).
+    SEND_MEDIA: '/api/message/media', // POST (protected)
     BY_CONVERSATION: (conversationId) => `/api/conversation/${conversationId}`, // GET (protected)
     EDIT: (messageId) => `/api/message/${messageId}`, // PATCH (protected) { content }
     DELETE: (messageId) => `/api/message/${messageId}`, // DELETE (protected)

@@ -196,7 +196,11 @@ const updateUserAvatar = async (req, res) => {
             return res.status(400).json({ message: "No file uploaded" });
         }
 
-        const profilePicUrl = `/uploads/${req.file.filename}`;
+        // With CloudinaryStorage (see middleware/uploadMiddleware.js),
+        // req.file.filename is just the Cloudinary public_id — not a URL.
+        // req.file.path is the actual hosted https://res.cloudinary.com/...
+        // secure_url, which is what the frontend needs as an <img src>.
+        const profilePicUrl = req.file.path;
         const result = await userModel.updateUserAvatar(userId, profilePicUrl);
 
         if (result.rows.length === 0) {

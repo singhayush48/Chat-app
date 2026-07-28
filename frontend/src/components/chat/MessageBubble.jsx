@@ -3,6 +3,7 @@ import { MoreVertical, Pencil, Trash2, Check, CheckCheck, X as XIcon } from 'luc
 import toast from 'react-hot-toast';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
+import { MediaMessage } from '@/components/chat/MediaMessage';
 import { formatMessageTime, formatFullTimestamp, wasEdited } from '@/utils/formatTime';
 import { getErrorMessage } from '@/utils/errorMessage';
 import { normalizeMessageStatus } from '@/utils/messageStatus';
@@ -33,6 +34,11 @@ export function MessageBubble({ message, isOwn, onEdit, onDelete }) {
   const textareaRef = useRef(null);
   const messageId = message.message_id ?? message.id;
   const isDeleted = Boolean(message.is_deleted);
+  const isMedia = Boolean(message.media_url);
+  // Image/video messages look better as a "naked" media block (no colored
+  // bubble background/padding around the thumbnail itself) — the caption
+  // and timestamp still get a slim padded strip beneath.
+  const isEdgeToEdgeMedia = isMedia && (message.message_type === 'IMAGE' || message.message_type === 'VIDEO');
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -167,7 +173,8 @@ export function MessageBubble({ message, isOwn, onEdit, onDelete }) {
       <div className={cn('flex max-w-[75%] flex-col', isOwn ? 'items-end' : 'items-start')}>
         <div
           className={cn(
-            'rounded-2xl px-3.5 py-2 text-sm shadow-sm animate-message-in',
+            'rounded-2xl text-sm shadow-sm animate-message-in',
+            isEdgeToEdgeMedia ? 'overflow-hidden p-1' : 'px-3.5 py-2',
             isOwn
               ? 'rounded-br-sm bg-primary text-primary-foreground'
               : 'rounded-bl-sm bg-surface-elevated text-foreground'
@@ -206,11 +213,22 @@ export function MessageBubble({ message, isOwn, onEdit, onDelete }) {
             </div>
           ) : (
             <>
-              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              {isMedia && <MediaMessage message={message} isOwn={isOwn} />}
+              {message.content && (
+                <p
+                  className={cn(
+                    'whitespace-pre-wrap break-words',
+                    isMedia && (isEdgeToEdgeMedia ? 'px-2 pt-1.5' : 'mt-1.5')
+                  )}
+                >
+                  {message.content}
+                </p>
+              )}
               <p
                 title={formatFullTimestamp(message.created_at)}
                 className={cn(
-                  'mt-1 flex items-center justify-end gap-1 text-right text-[10px]',
+                  'flex items-center justify-end gap-1 text-right text-[10px]',
+                  isEdgeToEdgeMedia ? 'px-2 pb-0.5 pt-1' : 'mt-1',
                   isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
                 )}
               >

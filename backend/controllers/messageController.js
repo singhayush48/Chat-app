@@ -50,8 +50,11 @@ const sendMessage = async (req, res) => {
             });
         }
 
-        const response = await messageModel.sendMessage(conversationId, senderId, content);
-        const newMessage = response.rows[0];
+        const newMessage = await messageModel.saveMessage({
+            conversationId,
+            senderId,
+            content,
+        });
 
         // Real-time delivery: anyone with this conversation's room open
         // (see "conversation:join" in sockets/socket.js) gets the message

@@ -11,7 +11,7 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 
 app.use(cors({
-  origin: 'https://chat-app-45hp.vercel.app', // your Vite dev server URL
+  origin: 'https://vaani-chat-app-delta.vercel.app', // your Vite dev server URL
   credentials: true
 }));
 

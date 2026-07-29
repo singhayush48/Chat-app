@@ -121,8 +121,6 @@ const loginUser = async (req, res) => {
         const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, {
             expiresIn: TOKEN_EXPIRY,
         });
-       res.cookie(AUTH_COOKIE_NAME, token, AUTH_COOKIE_OPTIONS);
-        return res.status(200).json({ message: "Login successful" });
         // No cookie — the client stores this token and sends it back as
         // `Authorization: Bearer <token>` on every subsequent request
         // (see frontend src/utils/tokenStorage.js + src/api/axiosInstance.js)
@@ -143,7 +141,7 @@ const logoutUser = async (req, res) => {
         // authmiddleware on this route so req.user is populated.
         await userModel.logoutUser(req.user.userId);
 
-        // The httpOnly cookie is gone, but any open Socket.IO connections
+        // The client's token is gone (or about to be), but any open Socket.IO connections
         // for this user would otherwise keep running (and keep them
         // showing as "online") until they happen to disconnect on their
         // own. Force them closed now so REST logout and socket state

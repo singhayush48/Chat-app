@@ -7,17 +7,14 @@ const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoute');
 const messagesRoutes = require('./routes/messageRoute.js');
 const userProfileRoutes = require('./routes/userProfileRoutes');
-const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const allowedOrigins = require('./config/allowedOrigins');
 
 // Render terminates TLS at its edge and forwards to this app over plain
 // HTTP internally. Without `trust proxy`, Express has no way to know the
-// original request was actually HTTPS (req.secure, req.protocol, and any
-// `X-Forwarded-*`-based logic would be wrong). This doesn't affect the
-// `secure: true` cookie flag we set explicitly in authController.js, but
-// it's required for correctness of anything else that inspects the
-// protocol, and is standard practice for any Express app behind a proxy.
+// original request was actually HTTPS. Kept as standard practice for any
+// Express app behind a reverse proxy, even though auth no longer depends
+// on cookie `secure` flags.
 app.set('trust proxy', 1);
 
 app.use(cors({
@@ -29,9 +26,11 @@ app.use(cors({
 
     return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
+  // No longer strictly required now that auth is a Bearer header instead
+  // of a cookie, but left on since it's harmless and some future feature
+  // might still want a cookie-based concern (e.g. a refresh token).
   credentials: true,
 }));
-app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -6,47 +6,25 @@ dotenv.config();
 const { disconnectUserSockets } = require("../sockets/socket");
 
 /**
+ * AUTH STRATEGY: Authorization header (Bearer token), not cookies.
+ *
  * The frontend (vercel.app) and backend (onrender.com) are different
- * registrable domains, so this is a CROSS-SITE deployment, not just
- * cross-origin. A cross-site cookie is only ever sent by the browser on
- * XHR/fetch requests if it is set with `SameSite=None; Secure`. The
- * default `SameSite=Lax` (what you get if you omit the option, which is
- * what this file used to do) is silently dropped by Chrome/Edge on some
- * requests and outright rejected by Safari/iOS and Android Chrome — that
- * mismatch is exactly why login succeeded but every following request
- * (including /api/auth/me) came back 401.
+ * registrable domains — a genuinely cross-site deployment. Even with
+ * `SameSite=None; Secure` set correctly, a cross-site cookie is still
+ * classified as a *third-party* cookie by the browser, and both Safari
+ * (ITP, on by default since 2020) and a growing share of Chrome
+ * (Tracking Protection) block third-party cookies outright, regardless
+ * of any cookie attribute. That's why login would succeed but the very
+ * next request (/api/auth/me) would 401 on mobile even after the
+ * SameSite fix — no cookie attribute can fix a third-party cookie ban.
  *
- * `secure: true` is required by every browser whenever `sameSite: "none"`
- * is used, and both of our real hosts (Vercel, Render) are HTTPS-only, so
- * this is safe. Locally over http://localhost it's relaxed to `lax` so
- * cookies still work for local dev without HTTPS.
- *
- * IMPORTANT: set NODE_ENV=production in Render's environment variables,
- * or this will stay in "lax/insecure" dev mode in production.
+ * Sending the JWT as a normal response field and having the client
+ * attach it as `Authorization: Bearer <token>` sidesteps all of this —
+ * it isn't a cookie, so none of that policy machinery applies. This is
+ * the standard pattern for an SPA and API that live on different
+ * domains.
  */
-const IS_PROD = process.env.NODE_ENV === "production";
-
-const AUTH_COOKIE_NAME = "token";
-
-// Used when *setting* the cookie (login).
-const AUTH_COOKIE_OPTIONS = {
-    httpOnly: true,
-    secure: IS_PROD,
-    sameSite: IS_PROD ? "none" : "lax",
-    path: "/",
-    maxAge: 60 * 60 * 1000, // 1 hour — matches the JWT's expiresIn below
-};
-
-// Used when *clearing* the cookie (logout). Must NOT include maxAge, but
-// MUST match httpOnly/secure/sameSite/path exactly, or the browser will
-// treat it as a different cookie and refuse to delete the real one —
-// this is enforced strictly by Safari in particular.
-const CLEAR_COOKIE_OPTIONS = {
-    httpOnly: true,
-    secure: IS_PROD,
-    sameSite: IS_PROD ? "none" : "lax",
-    path: "/",
-};
+const TOKEN_EXPIRY = "1h";
 
 const registerUser = async (req, res) => {
     try {
@@ -141,10 +119,15 @@ const loginUser = async (req, res) => {
         }
 
         const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, {
-            expiresIn: "1h",
+            expiresIn: TOKEN_EXPIRY,
         });
        res.cookie(AUTH_COOKIE_NAME, token, AUTH_COOKIE_OPTIONS);
         return res.status(200).json({ message: "Login successful" });
+        // No cookie — the client stores this token and sends it back as
+        // `Authorization: Bearer <token>` on every subsequent request
+        // (see frontend src/utils/tokenStorage.js + src/api/axiosInstance.js)
+        // and on the Socket.IO handshake (see frontend src/services/socket.js).
+        return res.status(200).json({ message: "Login successful", token });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ message: "Internal Server Error" });
@@ -153,7 +136,9 @@ const loginUser = async (req, res) => {
 
 const logoutUser = async (req, res) => {
     try {
-        res.clearCookie(AUTH_COOKIE_NAME, CLEAR_COOKIE_OPTIONS);
+        // Nothing to clear server-side — auth is a client-held Bearer
+        // token now, not a cookie. The frontend deletes its stored token
+        // on a successful (or even failed) call to this endpoint.
         // Update the user's online status in the database. Requires
         // authmiddleware on this route so req.user is populated.
         await userModel.logoutUser(req.user.userId);

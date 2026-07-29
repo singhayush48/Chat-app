@@ -5,8 +5,8 @@
  *
  * Responsibilities:
  *   1. Attach Socket.IO to the shared HTTP server (`initSocket`).
- *   2. Authenticate every socket connection using the SAME httpOnly JWT
- *      cookie that `middleware/authMiddleware.js` uses for REST requests,
+ *   2. Authenticate every socket connection using the SAME JWT Bearer
+ *      token that `middleware/authMiddleware.js` uses for REST requests,
  *      so a browser tab is "logged in" identically on both transports.
  *   3. Track presence (who is online) in memory and keep `users.is_online`
  *      / `users.last_seen` in the database in sync.
@@ -41,7 +41,6 @@
  */
 
 const jwt = require("jsonwebtoken");
-const cookie = require("cookie");
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -96,18 +95,15 @@ function isUserOnline(userId) {
 
 /**
  * Socket.IO auth middleware. Runs once per connection attempt, before
- * "connection" fires. Mirrors authMiddleware.js exactly (same cookie, same
- * JWT secret) so REST and sockets never disagree about who's logged in.
+ * "connection" fires. Reads the JWT from the handshake `auth` payload
+ * (sent by the client as `io(url, { auth: (cb) => cb({ token }) })` —
+ * see frontend src/services/socket.js) rather than a cookie, mirroring
+ * authMiddleware.js's Bearer-token approach so REST and sockets never
+ * disagree about who's logged in.
  */
 function socketAuthMiddleware(socket, next) {
   try {
-    const rawCookieHeader = socket.handshake.headers.cookie;
-    if (!rawCookieHeader) {
-      return next(new Error("Unauthorized"));
-    }
-
-    const parsedCookies = cookie.parse(rawCookieHeader);
-    const token = parsedCookies.token;
+    const token = socket.handshake.auth?.token;
     if (!token) {
       return next(new Error("Unauthorized"));
     }
@@ -373,7 +369,7 @@ function emitToUser(userId, event, payload) {
 
 /**
  * Forcibly disconnects every socket belonging to a user. Used by REST
- * logout (POST /user/logout) so that clearing the httpOnly cookie also
+ * logout (POST /user/logout) so that the client discarding its token also
  * tears down any live socket connections instead of leaving a "logged
  * out but still technically connected" socket lingering until it times
  * out on its own.

@@ -8,7 +8,7 @@ const authRoutes = require('./routes/authRoute');
 const messagesRoutes = require('./routes/messageRoute.js');
 const userProfileRoutes = require('./routes/userProfileRoutes');
 const cors = require('cors');
-const allowedOrigins = require('./config/allowedOrigins');
+const { isOriginAllowed } = require('./config/allowedOrigins');
 
 // Render terminates TLS at its edge and forwards to this app over plain
 // HTTP internally. Without `trust proxy`, Express has no way to know the
@@ -19,11 +19,9 @@ app.set('trust proxy', 1);
 
 app.use(cors({
   origin(origin, callback) {
-    // Allow requests without an Origin header (Postman, curl, health checks)
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isOriginAllowed(origin)) {
       return callback(null, true);
     }
-
     return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   // No longer strictly required now that auth is a Bearer header instead

@@ -46,7 +46,7 @@ dotenv.config();
 
 const userModel = require("../models/userModel");
 const conversationModel = require("../models/conversationModel");
-const allowedOrigins = require("../config/allowedOrigins");
+const { isOriginAllowed } = require("../config/allowedOrigins");
 
 /** The Socket.IO server instance, set once initSocket() runs. */
 let io = null;
@@ -329,9 +329,15 @@ function initSocket(server) {
     cors: {
       // Was hardcoded to "http://localhost:5173" only, which silently
       // rejected every handshake from the deployed Vercel frontend.
-      // Now uses the same allowlist as the Express CORS config
-      // (config/allowedOrigins.js) so REST and Socket.IO never disagree.
-      origin: allowedOrigins,
+      // Now uses the same allow-check as the Express CORS config
+      // (config/allowedOrigins.js) so REST and Socket.IO never disagree,
+      // and both accept Vercel preview deployment URLs too.
+      origin(origin, callback) {
+        if (isOriginAllowed(origin)) {
+          return callback(null, true);
+        }
+        return callback(new Error(`Not allowed by CORS: ${origin}`));
+      },
       credentials: true,
     },
   });

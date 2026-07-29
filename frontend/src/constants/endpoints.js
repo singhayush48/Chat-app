@@ -10,7 +10,7 @@
 export const ENDPOINTS = {
   AUTH: {
     REGISTER: '/user/register', // POST { username, phone, email, password }
-    LOGIN: '/user/login', // POST { email, password } -> sets httpOnly cookie "token"
+    LOGIN: '/user/login', // POST { email, password } -> { message, token } (Bearer token, not a cookie)
     LOGOUT: '/user/logout', // POST (protected — marks the user offline)
     ME: '/api/auth/me', // GET (protected)
   },

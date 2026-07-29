@@ -2,6 +2,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { emitUnauthorized } from '@/utils/authEvents';
 import { getErrorMessage } from '@/utils/errorMessage';
+import { getToken } from '@/utils/tokenStorage';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -9,19 +10,28 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
  * Single Axios instance for the whole app. Components and pages must never
  * call axios directly — always go through a service in `src/api`.
  *
- * Auth is via an httpOnly cookie set by the backend, so we never attach an
- * Authorization header; `withCredentials` ensures the cookie is sent.
+ * Auth is via a JWT stored client-side (see src/utils/tokenStorage.js),
+ * attached to every request as `Authorization: Bearer <token>` below.
+ * NOT a cookie: the frontend (vercel.app) and backend (onrender.com) are
+ * different domains, and both Safari and a growing share of Chrome block
+ * third-party (cross-site) cookies outright regardless of cookie
+ * attributes — a Bearer header sidesteps that entirely.
  */
 export const axiosInstance = axios.create({
   baseURL: BASE_URL,
-  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
 axiosInstance.interceptors.request.use(
-  (config) => config,
+  (config) => {
+    const token = getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
   (error) => Promise.reject(error)
 );
 

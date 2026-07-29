@@ -16,8 +16,10 @@ export const authApi = {
 
   login: async ({ email, password }) => {
     const { data } = await axiosInstance.post(ENDPOINTS.AUTH.LOGIN, { email, password });
-    // Backend returns only { message } here. It does not return the user
-    // object, so the caller must follow up with authApi.getMe().
+    // Backend now returns { message, token } — the caller (AuthContext)
+    // is responsible for storing the token before making any further
+    // requests, then following up with authApi.getMe() since the user
+    // object itself still isn't included here.
     return data;
   },
 

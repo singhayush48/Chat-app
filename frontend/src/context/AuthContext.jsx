@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { authApi } from '@/api/authApi';
 import { getErrorMessage } from '@/utils/errorMessage';
 import { subscribeUnauthorized } from '@/utils/authEvents';
+import { setToken, clearToken } from '@/utils/tokenStorage';
 import { AuthContext } from './auth-context';
 
 export function AuthProvider({ children }) {
@@ -14,8 +15,9 @@ export function AuthProvider({ children }) {
 
   const checkAuth = useCallback(async () => {
     try {
-      // silent401: this call is *expected* to 401 for logged-out visitors,
-      // so we don't want the global interceptor firing a toast for it.
+      // silent401: this call is *expected* to 401 for logged-out visitors
+      // (or if there's simply no token stored yet), so we don't want the
+      // global interceptor firing a toast for it.
       const currentUser = await authApi.getMe({ silent401: true });
       setUser(currentUser);
       return currentUser;
@@ -42,23 +44,29 @@ export function AuthProvider({ children }) {
     };
   }, [checkAuth]);
 
-  // If any other request in the app hits a 401 (session expired mid-use),
-  // clear local user state so ProtectedRoute redirects to /login.
+  // If any other request in the app hits a 401 (session expired mid-use,
+  // e.g. the JWT's 1h expiry passed), clear the stored token and local
+  // user state so ProtectedRoute redirects to /login.
   useEffect(() => {
-    return subscribeUnauthorized(() => setUser(null));
+    return subscribeUnauthorized(() => {
+      clearToken();
+      setUser(null);
+    });
   }, []);
 
   const login = useCallback(async ({ email, password }) => {
-    await authApi.login({ email, password });
-    // Login response doesn't include the user object, only a message —
-    // fetch it separately so the rest of the app has full user data.
+    const { token } = await authApi.login({ email, password });
+    // Must store the token BEFORE calling getMe() — the axios request
+    // interceptor reads it from storage to attach the Authorization
+    // header (see src/api/axiosInstance.js).
+    setToken(token);
     const currentUser = await authApi.getMe();
     setUser(currentUser);
     return currentUser;
   }, []);
 
   const register = useCallback(async (formValues) => {
-    // Registration does not log the user in (no cookie is issued), so we
+    // Registration does not log the user in (no token is issued), so we
     // deliberately do not setUser() here — the Register page should
     // redirect to /login on success.
     return authApi.register(formValues);
@@ -72,6 +80,7 @@ export function AuthProvider({ children }) {
       // isn't stuck "logged in" on a broken connection.
       toast.error(getErrorMessage(error, 'Could not reach the server to log out.'));
     } finally {
+      clearToken();
       setUser(null);
     }
   }, []);

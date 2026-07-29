@@ -28,7 +28,7 @@ export function RegisterForm() {
   const onSubmit = async ({ confirmPassword: _confirmPassword, ...values }) => {
     try {
       await registerUser(values);
-      // Registration does not log the user in (backend issues no cookie
+      // Registration does not log the user in (backend issues no token
       // here), so send them to Login rather than Home.
       toast.success('Account created. Please log in.');
       navigate(ROUTES.LOGIN, { replace: true });
